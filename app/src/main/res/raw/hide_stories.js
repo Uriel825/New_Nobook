@@ -9,12 +9,5 @@
 
   hideTargetElement();
 
-  const observer = new MutationObserver(() => {
-    hideTargetElement();
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+  nbSubscribe(hideTargetElement);
 })();

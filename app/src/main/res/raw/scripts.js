@@ -1,4 +1,34 @@
 
+// Shared DOM observer. Every script used to create its own MutationObserver on
+// the whole page and re-scan the document on every single change, which keeps
+// the CPU (and the battery) busy while Facebook renders the feed. Now there is
+// one observer, and the scripts' callbacks run at most once every FLUSH_MS with
+// all the mutation records collected in between.
+(() => {
+    if (window.nbSubscribe) return;
+
+    const FLUSH_MS = 100;
+    const subscribers = [];
+    let pending = [];
+    let timer = null;
+
+    const flush = () => {
+        timer = null;
+        const records = pending;
+        pending = [];
+        for (const fn of subscribers) {
+            try { fn(records); } catch (e) {}
+        }
+    };
+
+    new MutationObserver(records => {
+        for (const record of records) pending.push(record);
+        if (timer === null) timer = setTimeout(flush, FLUSH_MS);
+    }).observe(document.body, { childList: true, subtree: true });
+
+    window.nbSubscribe = fn => { subscribers.push(fn); };
+})();
+
 // desktop mode identifier
 (() => {
     window.isDesktopMode = () => {
@@ -97,7 +127,7 @@
 
       document.querySelectorAll(parentSelector).forEach(checkAndRemoveThird);
 
-      const observer = new MutationObserver(mutations => {
+      nbSubscribe(mutations => {
         for (const mutation of mutations) {
           mutation.addedNodes.forEach(node => {
             if (node.nodeType === 1) {
@@ -109,8 +139,6 @@
           });
         }
       });
-
-      observer.observe(document.body, { childList: true, subtree: true });
     })();
 })();
 
@@ -178,9 +206,15 @@
 
   updateText();
 
-  new MutationObserver(updateText).observe(document.body, {
-    childList: true,
-    subtree: true
+  // Only look at what was just added instead of re-scanning the whole page.
+  nbSubscribe(records => {
+    for (const record of records) {
+      record.addedNodes.forEach(node => {
+        if (node.nodeType !== 1) return;
+        if (node.matches('.native-text')) makeSelectable(node);
+        node.querySelectorAll('.native-text').forEach(makeSelectable);
+      });
+    }
   });
 })();
 
@@ -194,16 +228,9 @@
     }
     applyOverlayStyle();
 
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.addedNodes.length)
-                applyOverlayStyle();
-        });
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
+    nbSubscribe(records => {
+        if (records.some(mutation => mutation.addedNodes.length))
+            applyOverlayStyle();
     });
 })();
 
@@ -214,7 +241,7 @@
 })();
 
 // Hide annoying bottom banners
-const observer = new MutationObserver(() => {
+nbSubscribe(() => {
 
   if (location.pathname === '/'
   && document.querySelector('div[role="button"][aria-label*="Facebook"]') === null) return;
@@ -230,8 +257,6 @@ const observer = new MutationObserver(() => {
     }
   }
 });
-
-observer.observe(document.body, { childList: true, subtree: true });
 
 
 // Hold Effect Script
@@ -314,13 +339,11 @@ observer.observe(document.body, { childList: true, subtree: true });
 
     insertButton();
 
-    const observer = new MutationObserver(() => {
+    nbSubscribe(() => {
       if (!document.getElementById(BUTTON_ID) && isFeed()) {
         insertButton();
       }
     });
-
-    observer.observe(document.body, { childList: true, subtree: true });
 
     // Observer for theme-color changes
     const themeMeta = document.querySelector('meta[name="theme-color"]');
@@ -351,12 +374,18 @@ observer.observe(document.body, { childList: true, subtree: true });
     window._downloadBridgeInitialized = true;
     const originalCreateObjectURL = URL.createObjectURL;
     URL.createObjectURL = function(blob) {
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            if (reader.result)
-                DownloadBridge.downloadBase64File(reader.result, blob.type);
-        };
-        reader.readAsDataURL(blob);
-        return originalCreateObjectURL(blob);
+        // MediaSource objects (video streaming) are not Blobs: reading them
+        // throws, which used to break createObjectURL for the page.
+        try {
+            if (blob instanceof Blob) {
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    if (reader.result)
+                        DownloadBridge.downloadBase64File(reader.result, blob.type);
+                };
+                reader.readAsDataURL(blob);
+            }
+        } catch (e) {}
+        return originalCreateObjectURL.apply(this, arguments);
     };
 })();

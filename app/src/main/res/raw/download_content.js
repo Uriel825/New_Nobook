@@ -357,7 +357,8 @@
     // Initial check
     processPage();
 
-    // Set up DOM observer
+    // Set up DOM observer (checks are batched to at most one every 200 ms)
+    let throttleTimer = null;
     const observer = new MutationObserver(mutations => {
       const hasRelevantChanges = mutations.some(
         mutation =>
@@ -366,7 +367,11 @@
             (mutation.target.tagName === "VIDEO" ||
              mutation.target.tagName === "IMG"))
       );
-      if (hasRelevantChanges) processPage();
+      if (!hasRelevantChanges || throttleTimer !== null) return;
+      throttleTimer = setTimeout(() => {
+        throttleTimer = null;
+        processPage();
+      }, 200);
     });
 
     observer.observe(document.body, {

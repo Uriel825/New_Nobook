@@ -8,8 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ycngmn.nobook.R
 import com.ycngmn.nobook.utils.Script
-import com.ycngmn.nobook.utils.fetchScripts
+import com.ycngmn.nobook.utils.buildScriptBundle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class MainViewModel(
@@ -39,29 +41,27 @@ class MainViewModel(
         settings: SettingsViewModel
     ) {
         val scripts = listOf(
-            Script(true, R.raw.scripts, "scripts.js"), // always apply
-            Script(settings.removeAds.value, R.raw.adblock, "adblock.js"),
-            Script(settings.enableDownloadContent.value, R.raw.download_content, "download_content.js"),
-            Script(settings.enableCopyToClipboard.value, R.raw.copy_to_clipboard, "copy_to_clipboard.js"),
-            Script(settings.stickyNavbar.value, R.raw.sticky_navbar, "sticky_navbar.js"),
-            Script(!settings.pinchToZoom.value, R.raw.pinch_to_zoom, "pinch_to_zoom.js"),
-            Script(settings.amoledBlack.value, R.raw.amoled_black, "amoled_black.js"),
-            Script(settings.hideSuggested.value, R.raw.hide_suggested, "hide_suggested.js"),
-            Script(settings.hideReels.value, R.raw.hide_reels, "hide_reels.js"),
-            Script(settings.hideStories.value, R.raw.hide_stories, "hide_stories.js"),
-            Script(settings.hidePeopleYouMayKnow.value, R.raw.hide_pymk, "hide_pymk.js"),
-            Script(settings.hideGroups.value, R.raw.hide_groups, "hide_groups.js")
+            Script(true, R.raw.scripts), // always apply
+            Script(settings.removeAds.value, R.raw.adblock),
+            Script(settings.enableDownloadContent.value, R.raw.download_content),
+            Script(settings.enableCopyToClipboard.value, R.raw.copy_to_clipboard),
+            Script(settings.stickyNavbar.value, R.raw.sticky_navbar),
+            Script(!settings.pinchToZoom.value, R.raw.pinch_to_zoom),
+            Script(settings.amoledBlack.value, R.raw.amoled_black),
+            Script(settings.hideSuggested.value, R.raw.hide_suggested),
+            Script(settings.hideReels.value, R.raw.hide_reels),
+            Script(settings.hideStories.value, R.raw.hide_stories),
+            Script(settings.hidePeopleYouMayKnow.value, R.raw.hide_pymk),
+            Script(settings.hideGroups.value, R.raw.hide_groups)
         )
 
         viewModelScope.launch {
-            _scripts.value =
-                fetchScripts(
-                    scripts = scripts,
-                    fallbackContent = { resId ->
-                        resources.openRawResource(resId).bufferedReader()
-                            .use { it.readText() }
-                    }
-                )
+            _scripts.value = withContext(Dispatchers.IO) {
+                buildScriptBundle(scripts) { resId ->
+                    resources.openRawResource(resId).bufferedReader()
+                        .use { it.readText() }
+                }
+            }
         }
     }
 

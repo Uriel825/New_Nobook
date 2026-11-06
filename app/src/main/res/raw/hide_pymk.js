@@ -11,14 +11,7 @@
 
   hidePymk();
 
-  const obs = new MutationObserver(() => {
-    hidePymk();
-  });
-
-  obs.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+  nbSubscribe(() => hidePymk());
 })();
 
 
@@ -35,7 +28,7 @@
 
   hidePymk([document.body]);
 
-  new MutationObserver(muts =>
+  nbSubscribe(muts =>
     muts.forEach(m => hidePymk([...m.addedNodes]))
-  ).observe(document.body, { childList: true, subtree: true });
+  );
 })();

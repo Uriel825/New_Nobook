@@ -29,6 +29,8 @@ extensions.configure<ApplicationExtension> {
 
     buildTypes {
         release {
+            // Installs next to the original Nobook so both can be compared.
+            applicationIdSuffix = ".opt"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -52,8 +54,6 @@ dependencies {
     api(libs.compose.webview.multiplatform)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

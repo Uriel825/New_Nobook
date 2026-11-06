@@ -19,14 +19,7 @@
 
         hideMatchingContainers();
 
-        const observer = new MutationObserver(() => {
-          hideMatchingContainers();
-        });
-
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-        });
+        nbSubscribe(hideMatchingContainers);
       })();
     } else {
       (function() {
@@ -52,17 +45,12 @@
           });
         }
 
-        const observer = new MutationObserver(mutations => {
+        nbSubscribe(mutations => {
           for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
               processNode(node);
             }
           }
-        });
-
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true
         });
 
         processNode(document.body);

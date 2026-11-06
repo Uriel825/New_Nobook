@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +30,9 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
@@ -80,6 +84,30 @@ fun NobookWebView(
         if (bundle == null) {
             navigator.loadUrl(url)
         }
+    }
+
+    // Keep a handle to the underlying WebView so it can be paused while the
+    // app is not on screen (stops page timers, animations and video, which is
+    // what keeps draining the battery in the background).
+    val webViewRef = remember { mutableStateOf<android.webkit.WebView?>(null) }
+    val lifecycleOwner = activity as? LifecycleOwner
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            val webView = webViewRef.value ?: return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    webView.onPause()
+                    webView.pauseTimers()
+                }
+                Lifecycle.Event.ON_START -> {
+                    webView.onResume()
+                    webView.resumeTimers()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
     }
 
     // allow exiting while scrolling to top.
@@ -242,6 +270,8 @@ fun NobookWebView(
         captureBackPresses = false,
         onCreated = { webView ->
 
+            webViewRef.value = webView
+
             val cookieManager = CookieManager.getInstance()
             cookieManager.setAcceptCookie(true)
             cookieManager.setAcceptThirdPartyCookies(webView, true)
@@ -254,7 +284,9 @@ fun NobookWebView(
                     //isDebugInspectorInfoEnabled = true
                     domStorageEnabled = true
                     hideDefaultVideoPoster = true
-                    mediaPlaybackRequiresUserGesture = false
+                    // Videos wait for a tap instead of autoplaying in the feed:
+                    // big saving in battery, data and CPU.
+                    mediaPlaybackRequiresUserGesture = true
                 }
             }
 

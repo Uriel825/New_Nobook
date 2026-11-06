@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nobook</string>
+    <string name="app_name">Nobook Opt</string>
     <string name="apply_immediately">Apply Immediately?</string>
     <string name="remove_ads_title">Remove ads</string>
     <string name="download_content_title">Download contents</string>

@@ -9,7 +9,7 @@
   };
 
   hideLastGroupSuggestion();
-  new MutationObserver(hideLastGroupSuggestion).observe(document.body, { childList: true, subtree: true });
+  nbSubscribe(hideLastGroupSuggestion);
 })();
 
 // Hide on comments
@@ -26,9 +26,6 @@
 
   hideGroupContainer();
 
-  new MutationObserver(hideGroupContainer).observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  nbSubscribe(hideGroupContainer);
 })();
 

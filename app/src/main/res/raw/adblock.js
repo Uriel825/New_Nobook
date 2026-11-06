@@ -10,7 +10,7 @@
 
           removeSponsored();
 
-          const observer = new MutationObserver(mutations => {
+          nbSubscribe(mutations => {
             for (const mutation of mutations) {
               for (const node of mutation.addedNodes) {
                 if (!(node instanceof HTMLElement)) continue;
@@ -21,10 +21,6 @@
                 }
               }
             }
-          });
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true
           });
         })();
 
@@ -60,6 +56,7 @@
         const containers = document.querySelectorAll(selector);
 
         containers.forEach(container => {
+            if (container.style.display === 'none') return; // already hidden
             const spans = container.querySelectorAll(textSelector);
             for (const span of spans) {
                 if (sponsoredRegex.test(span.textContent)) {
@@ -89,17 +86,18 @@
 
     hideAllAds();
 
-    const observer = new MutationObserver(hideAllAds);
-    observer.observe(document.body, { childList: true, subtree: true });
+    nbSubscribe(hideAllAds);
+
+    // One regex, built once. It used to build ~70 RegExp objects for every
+    // span of every reel on every check.
+    const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const sponsoredWordRegex = new RegExp(
+        `\\b(?:${sponsoredTexts.map(escapeRegExp).join('|')})\\b`, 'i'
+    );
 
     function containsSponsoredText(text) {
-        const lowerText = text.toLowerCase();
-        return sponsoredTexts.some(word => {
-            const lowerWord = word.toLowerCase();
-            // Use word boundary regex to match whole words only
-            const wordBoundaryRegex = new RegExp(`\\b${lowerWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-            return wordBoundaryRegex.test(lowerText);
-        });
+        // Whole words only (word boundaries).
+        return sponsoredWordRegex.test(text);
     }
 
 
@@ -236,7 +234,7 @@
     removeReelAds();
 
     // Watch for dynamically added reel ads
-    const reelObserver = new MutationObserver(mutations => {
+    nbSubscribe(mutations => {
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
                 if (!(node instanceof HTMLElement)) continue;
@@ -250,6 +248,4 @@
             }
         }
     });
-
-    reelObserver.observe(document.body, { childList: true, subtree: true });
 })();
