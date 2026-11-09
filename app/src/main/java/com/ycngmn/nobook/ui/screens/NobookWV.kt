@@ -284,9 +284,10 @@ fun NobookWebView(
                     //isDebugInspectorInfoEnabled = true
                     domStorageEnabled = true
                     hideDefaultVideoPoster = true
-                    // Videos wait for a tap instead of autoplaying in the feed:
-                    // big saving in battery, data and CPU.
-                    mediaPlaybackRequiresUserGesture = true
+                    // Facebook starts videos and stories from its own code, not
+                    // from a tap, so this must stay false or media never loads
+                    // (blank posts, stories stuck on a blank screen).
+                    mediaPlaybackRequiresUserGesture = false
                 }
             }
 
