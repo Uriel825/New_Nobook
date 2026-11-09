@@ -21,8 +21,11 @@ extensions.configure<ApplicationExtension> {
         applicationId = "com.ycngmn.nobook"
         minSdk = 23
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.1.1"
+        // Every GitHub Actions run gets a higher version, so a new build installs
+        // over the previous one (same signing key) without uninstalling.
+        val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0
+        versionCode = 11 + runNumber
+        versionName = if (runNumber > 0) "0.1.1-opt.$runNumber" else "0.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
