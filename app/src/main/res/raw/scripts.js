@@ -12,13 +12,21 @@
     let pending = [];
     let timer = null;
 
+    // Cost of our own scripts (read by the diagnostic report).
+    const stats = window.__nbStats = { flushes: 0, totalMs: 0, maxMs: 0 };
+
     const flush = () => {
         timer = null;
         const records = pending;
         pending = [];
+        const start = performance.now();
         for (const fn of subscribers) {
             try { fn(records); } catch (e) {}
         }
+        const took = performance.now() - start;
+        stats.flushes++;
+        stats.totalMs += took;
+        if (took > stats.maxMs) stats.maxMs = took;
     };
 
     new MutationObserver(records => {
