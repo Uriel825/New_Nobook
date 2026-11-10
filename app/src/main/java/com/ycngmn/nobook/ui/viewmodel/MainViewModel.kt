@@ -42,6 +42,7 @@ class MainViewModel(
     ) {
         val scripts = listOf(
             Script(true, R.raw.scripts), // always apply
+            Script(true, R.raw.cdn_fallback), // retry stuck images/videos on the sibling CDN node
             Script(true, R.raw.nav_debug), // TEMPORARY diagnostic
             Script(settings.removeAds.value, R.raw.adblock),
             Script(settings.enableDownloadContent.value, R.raw.download_content),

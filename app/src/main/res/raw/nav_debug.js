@@ -154,6 +154,12 @@
             ' ahorro-datos=' + (conn.saveData ? 'si' : 'no'));
         out.push('PAGINA: visibilidad=' + document.visibilityState + ' foco=' + document.hasFocus());
         out.push('SCRIPTS ACTIVOS: ' + (window.__nbActive ? window.__nbActive.join(',') : '?'));
+        const cdn = window.__nbCdn;
+        out.push('FALLBACK CDN: ' + (cdn
+            ? 'imagenes probadas=' + cdn.probes + ' rescatadas=' + cdn.rescued + ' fallidas=' + cdn.failed +
+              ' | fetch cambiados=' + cdn.fetchSwapped + ' ok=' + cdn.fetchOk + ' fallo=' + cdn.fetchFailed +
+              ' | nodos lentos=' + (cdn.slow.join(',') || '-') + ' | desactivado=' + (cdn.disabled ? 'si' : 'no')
+            : 'no cargado'));
         out.push('');
 
         const imgs = Array.from(document.images);
