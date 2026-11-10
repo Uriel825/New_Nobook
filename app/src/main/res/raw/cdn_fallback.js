@@ -58,8 +58,8 @@
         return best;
     };
 
-    const schedule = () => {
-        if (timer === null && !stats.disabled) timer = setTimeout(scan, cfg.tickMs);
+    const schedule = delay => {
+        if (timer === null && !stats.disabled) timer = setTimeout(scan, typeof delay === 'number' ? delay : cfg.tickMs);
     };
 
     function scan() {
@@ -98,6 +98,7 @@
         stats.slow = Array.from(slow);
 
         let waiting = false;
+        let noAlt = false;   // overdue images but no healthy sibling to try
         pending.forEach(p => {
             if (p.rec.state !== 'wait') return;
             const limit = slow.has(p.host) ? cfg.slowGraceMs : cfg.stallMs;
@@ -106,7 +107,7 @@
             if (p.img.srcset) { p.rec.state = 'skip'; return; }
             if (inflight >= cfg.maxProbes) return;
             const altHost = pickAlt(p.host);
-            if (!altHost) return;
+            if (!altHost) { noAlt = true; return; }
 
             const alt = swapHost(p.url, p.host, altHost);
             p.rec.state = 'probing';
@@ -132,7 +133,8 @@
             probe.src = alt;
         });
 
-        if (waiting) schedule();
+        // Nothing to try right now: look again less often instead of every tick.
+        if (waiting) schedule(noAlt ? cfg.tickMs * 5 : cfg.tickMs);
     }
 
     // Media fetches (video segments) to a slow node go to its sibling first.
