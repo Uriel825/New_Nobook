@@ -58,10 +58,15 @@ class MainViewModel(
 
         viewModelScope.launch {
             _scripts.value = withContext(Dispatchers.IO) {
-                buildScriptBundle(scripts) { resId ->
+                val bundle = buildScriptBundle(scripts) { resId ->
                     resources.openRawResource(resId).bufferedReader()
                         .use { it.readText() }
                 }
+                // TEMPORARY diagnostic: lets the report list which scripts ran.
+                val active = scripts
+                    .filter { it.isEnabled }
+                    .joinToString(",") { "\"" + resources.getResourceEntryName(it.resourceId) + "\"" }
+                "window.__nbActive=[$active];\n$bundle"
             }
         }
     }

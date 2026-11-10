@@ -140,6 +140,22 @@
 
     const healthReport = () => {
         const out = [];
+        const hostOf = u => {
+            try { return new URL(u, location.href).host || 'data/blob'; } catch (e) { return '?'; }
+        };
+
+        // Device / engine / network (tells slow phone from slow network).
+        const nav = navigator;
+        const conn = nav.connection || {};
+        const chrome = (nav.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '?';
+        out.push('DISPOSITIVO: webview=' + chrome + ' nucleos=' + (nav.hardwareConcurrency || '?') +
+            ' ram=' + (nav.deviceMemory || '?') + 'GB red=' + (conn.effectiveType || '?') +
+            ' bajada=' + (conn.downlink || '?') + 'Mbps rtt=' + (conn.rtt || '?') + 'ms' +
+            ' ahorro-datos=' + (conn.saveData ? 'si' : 'no'));
+        out.push('PAGINA: visibilidad=' + document.visibilityState + ' foco=' + document.hasFocus());
+        out.push('SCRIPTS ACTIVOS: ' + (window.__nbActive ? window.__nbActive.join(',') : '?'));
+        out.push('');
+
         const imgs = Array.from(document.images);
         const loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
         const failed = imgs.filter(i => i.complete && i.naturalWidth === 0).length;
@@ -148,6 +164,26 @@
         out.push('IMAGENES: total=' + imgs.length + ' ok=' + loaded + ' fallo=' + failed +
             ' pendientes=' + pending + ' lazy=' + lazy);
         out.push('FONDOS CSS (background-image inline): ' + document.querySelectorAll('[style*="background-image"]').length);
+
+        // An <img> with no src counts as "complete", so every PENDING image
+        // below really has an address and has not finished downloading.
+        const byHost = {};
+        imgs.forEach(i => {
+            const h = hostOf(i.currentSrc || i.src || '');
+            const st = i.complete ? (i.naturalWidth > 0 ? 'ok' : 'fallo') : 'pend';
+            (byHost[h] = byHost[h] || { ok: 0, fallo: 0, pend: 0 })[st]++;
+        });
+        out.push('IMAGENES POR SERVIDOR (ok/fallo/pend):');
+        Object.keys(byHost).slice(0, 8).forEach(h =>
+            out.push('  ' + h + ' ' + byHost[h].ok + '/' + byHost[h].fallo + '/' + byHost[h].pend));
+        out.push('PENDIENTES (con src, sin terminar):');
+        imgs.filter(i => !i.complete).slice(0, 10).forEach(i => {
+            const u = i.currentSrc || i.src;
+            const r = i.getBoundingClientRect();
+            const vis = r.bottom > 0 && r.top < innerHeight ? 'en-pantalla' : 'fuera';
+            out.push('  ' + hostOf(u) + short(u) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) +
+                ' ' + vis + (i.decoding && i.decoding !== 'auto' ? ' dec=' + i.decoding : ''));
+        });
 
         const res = performance.getEntriesByType('resource');
         const byType = {};
@@ -159,7 +195,7 @@
         const slow = res.filter(r => r.duration > 0).sort((a, b) => b.duration - a.duration).slice(0, 8);
         out.push('MAS LENTOS:');
         slow.forEach(r => out.push('  ' + Math.round(r.duration) + 'ms ' + r.initiatorType + ' ' +
-            (r.transferSize ? Math.round(r.transferSize / 1024) + 'KB ' : '') + short(r.name)));
+            (r.transferSize ? Math.round(r.transferSize / 1024) + 'KB ' : '') + hostOf(r.name) + short(r.name)));
 
         const lt = longTasks;
         const ltTotal = lt.reduce((a, b) => a + b, 0);
